@@ -1,0 +1,96 @@
+# Narou Match Agent
+
+小説を読もう！の作品を探すための、ローカルMCPサーバーとAgent Skillです。
+
+利用者が「完結済みの長編ファンタジー」「主人公が成長する作品。評価の少ない作品は避けたい」のように伝えると、接続先のAIが希望を検索語と条件に変換し、Narou Matchの公開検索APIから作品情報を取得します。
+
+このパッケージは、検索結果をAIに学習させるものではありません。小説本文は取得せず、公式APIの作品情報（タイトル、作者、あらすじ、キーワード、評価、状態など）だけを検索します。サーバー側でLLM、embedding、データベースへの作品カタログ保存は行いません。
+
+## セットアップ
+
+Python 3.10以上が必要です。依存パッケージはありません。
+
+```bash
+git clone https://github.com/OWNER/narou-match-agent.git
+cd narou-match-agent
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install .
+```
+
+`OWNER` は実際に公開するGitHubアカウント名へ置き換えてください。このリポジトリには所有者を決め打ちしたURLを入れていません。
+
+## MCPクライアントへの登録
+
+インストール後の実行ファイルは `.venv/bin/narou-match-mcp` です。クライアントから標準入出力のMCPサーバーとして起動してください。
+
+Claude Desktopの設定例（`claude_desktop_config.json`）:
+
+```json
+{
+  "mcpServers": {
+    "narou-match": {
+      "command": "/absolute/path/narou-match-agent/.venv/bin/narou-match-mcp"
+    }
+  }
+}
+```
+
+Claude Codeの例:
+
+```bash
+claude mcp add narou-match -- /absolute/path/narou-match-agent/.venv/bin/narou-match-mcp
+```
+
+VS Codeの `.vscode/mcp.json` の例:
+
+```json
+{
+  "servers": {
+    "narou-match": {
+      "type": "stdio",
+      "command": "/absolute/path/narou-match-agent/.venv/bin/narou-match-mcp"
+    }
+  }
+}
+```
+
+その他のMCP対応クライアントでは、次のコマンドをstdioサーバーとして登録してください。
+
+```text
+/absolute/path/narou-match-agent/.venv/bin/narou-match-mcp
+```
+
+設定後、AIに「小説を読もう！から、完結済みの長編ファンタジーを探して」と依頼すると、`search_narou` ツールが候補を検索します。クライアントがAgent Skillを読み込める場合は、`skills/narou-match-search/SKILL.md` をそのクライアントのSkillディレクトリへコピーしてください。
+
+## 直接実行
+
+インストールせずに、リポジトリのルートから次のように実行することもできます。
+
+```bash
+PYTHONPATH=src python -m narou_match_mcp.server
+```
+
+標準入力と標準出力はMCPのJSON-RPC通信に使うため、ログは標準エラー出力へ出ます。
+
+## API接続先の変更
+
+既定の接続先は `https://api.novel-match.com/narou/search` です。開発用または自分で運用する互換APIを使う場合だけ、環境変数で変更できます。
+
+```bash
+export NAROU_MATCH_API_URL="https://api.example.com/narou/search"
+```
+
+APIキーは要求されません。接続先が公開APIであることと、接続先の利用条件を確認して使ってください。MCPサーバーは一回の検索で最大20件、12秒のタイムアウトを設定しています。検索APIには1分あたり20回の利用制限があるため、同じ条件での連続検索や自動巡回、大量のページ取得には使わないでください。
+
+## 公開時の注意
+
+GitHubに公開しても、AIサービスが自動的に見つけて利用するわけではありません。利用者がMCPサーバーをクライアントへ登録し、対応クライアントでSkillを読み込む必要があります。OpenAIの公式ディレクトリへの申請や、リモートMCPサーバーの公開はこのパッケージの範囲に含みません。
+
+## English summary
+
+This repository provides a dependency-free local MCP server and an Agent Skill for searching Narou Match. The server exposes one read-only `search_narou` tool, calls `https://api.novel-match.com/narou/search`, and returns metadata from the official Narou search flow. It does not fetch novel text, run an LLM, train a model, or store a bulk catalogue. Configure the executable as a stdio MCP server in a compatible client, then copy the Skill directory if the client supports Agent Skills.
+
+## License
+
+MIT License. See [LICENSE](LICENSE).
