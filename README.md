@@ -11,14 +11,12 @@
 Python 3.10以上が必要です。依存パッケージはありません。
 
 ```bash
-git clone https://github.com/OWNER/narou-match-agent.git
+git clone https://github.com/yukkie3276/narou-match-agent.git
 cd narou-match-agent
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install .
 ```
-
-`OWNER` は実際に公開するGitHubアカウント名へ置き換えてください。このリポジトリには所有者を決め打ちしたURLを入れていません。
 
 ## MCPクライアントへの登録
 
