@@ -25,6 +25,8 @@ MAX_RESULTS = 20
 MAX_OFFSET = 1000
 MAX_TAGS = 10
 MAX_TAG_LENGTH = 80
+MAX_EXCLUDE_WORDS = 10
+MAX_EXCLUDE_WORD_LENGTH = 80
 MAX_GENRES = 5
 MAX_SYNOPSIS_LENGTH = 1200
 MAX_KEYWORD_LENGTH = 600
@@ -38,7 +40,10 @@ _ENUMS = {
 
 TOOL_NAME = "search_narou"
 TOOL_DESCRIPTION = (
-    "小説を読もう！の作品を、利用者の希望を検索語と条件に変換して探します。"
+    "小説を読もう！の作品を検索します。外部のLLMが利用者の自然文の意味を"
+    "検索語・フィルター・除外語に整理してから呼び出してください。"
+    "避けたい要素はexclude_wordsで公式APIの部分一致除外にできます。"
+    "このMCPサーバーはLLMを呼び出しません。"
     "Narou Matchの公開検索APIが返す作品情報だけを使い、本文は取得しません。"
     "結果にはタイトル、作者、あらすじ、キーワード、評価、完結状態、公式URLなどを含みます。"
 )
@@ -55,8 +60,10 @@ def _tool_schema() -> dict[str, Any]:
                 "type": "string",
                 "maxLength": MAX_QUERY_LENGTH,
                 "description": (
-                    "作品名・あらすじ・キーワードに含まれそうな検索語。"
-                    "自然文から意味のある要素だけを入れる。空文字なら条件検索。"
+                    "外部のLLMが自然文の意味を整理して作る検索語。作品名・あらすじ・"
+                    "キーワードに現れそうな代表語や必要な類義語を少数選び、単なる依頼文の"
+                    "コピーにしない。例:「俺つええ系以外で男主人公が着実に強くなるファンタジー」"
+                    "なら「男主人公 成長 ファンタジー」など。空文字なら条件検索。"
                 ),
             },
             "status": {
@@ -94,6 +101,18 @@ def _tool_schema() -> dict[str, Any]:
                 "maxItems": MAX_TAGS,
                 "items": {"type": "string", "maxLength": MAX_TAG_LENGTH},
                 "description": "なろう公式キーワード。最大10件。",
+            },
+            "exclude_words": {
+                "type": "array",
+                "maxItems": MAX_EXCLUDE_WORDS,
+                "items": {"type": "string", "maxLength": MAX_EXCLUDE_WORD_LENGTH},
+                "description": (
+                    "外部のLLMが利用者の否定的な希望の意味を整理して選ぶ除外語。公式APIの"
+                    "notwordで作品名・あらすじ・キーワードなどへの部分一致で除外される。"
+                    "例えば「俺つええ系以外」なら、文脈に応じて「俺TUEEE」「チート」「無双」"
+                    "「主人公最強」「無敵」などを候補にする。ただし完全な意味判定ではないため、"
+                    "高い確度の語を最大10件まで指定する。"
+                ),
             },
             "min_rating_count": {
                 "type": "integer",
@@ -244,6 +263,13 @@ def _build_request(args: dict[str, Any]) -> dict[str, Any]:
             max_items=MAX_TAGS,
             item_kind=str,
             item_max_length=MAX_TAG_LENGTH,
+        ),
+        "exclude_words": _list_arg(
+            args,
+            "exclude_words",
+            max_items=MAX_EXCLUDE_WORDS,
+            item_kind=str,
+            item_max_length=MAX_EXCLUDE_WORD_LENGTH,
         ),
         "include_unrated": _bool_arg(args, "include_unrated", default=False),
         "include_stalled": _bool_arg(args, "include_stalled", default=True),
