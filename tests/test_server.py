@@ -19,6 +19,7 @@ def test_tool_guides_external_llm_to_expand_semantic_preferences() -> None:
     assert "外部のLLM" in TOOL_DESCRIPTION
     assert "LLMを呼び出しません" in TOOL_DESCRIPTION
     assert "自然文の意味" in schema["properties"]["query"]["description"]
-    assert "類義語" in schema["properties"]["query"]["description"]
+    assert "中心語を1〜2語" in schema["properties"]["query"]["description"]
+    assert "同義語を空白で追加しない" in schema["properties"]["query"]["description"]
     assert "否定的な希望" in schema["properties"]["exclude_words"]["description"]
     assert "俺TUEEE" in schema["properties"]["exclude_words"]["description"]
